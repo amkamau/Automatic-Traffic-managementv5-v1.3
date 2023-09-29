@@ -1,0 +1,49 @@
+person
+bicycle
+car
+motorbike
+aeroplane
+bus
+train
+truck
+boat
+traffic light
+fire hydrant
+stop sign
+parking meter
+bench
+bird
+cat
+dog
+backpack
+umbrella
+handbag
+suitcase
+sports ball
+kite
+baseball bat
+baseball glove
+skateboard
+surfboard
+tennis racket
+bottle
+cup
+fork
+knife
+spoon
+bowl
+chair
+sofa
+pottedplant
+bed
+toilet
+tvmonitor
+laptop
+mouse
+remote
+keyboard
+cell phone
+microwave
+refrigerator
+book
+clock
