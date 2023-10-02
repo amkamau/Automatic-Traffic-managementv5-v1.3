@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 import time
 import os
 from PIL import Image
@@ -21,6 +22,7 @@ objectconfig.initConfig()
 trackfile_mod_time = 0
 configfile_mod_time = 0
 center_axis = False
+object_list = np.array([])
 
 class_list = objectdetect.loadClasses()
 
@@ -79,7 +81,8 @@ def multiprocessFrame(frame, classid, confidence, box):
     
             
     object_text = str(object_name) +" "+ str(round(confidence,1)) +" : " +str(object_id)
-    object_list.append({'id': int(object_id) , 'object': str(object_name), 'box': [int(x1),int(y1),int(x2),int(y2)], 'center': [int(cx),int(cy)], 'frame': []}) #frame[y1:y2,x1:x2] })
+    np.append(object_list,{'id': int(object_id) , 'object': str(object_name), 'box': [int(x1),int(y1),int(x2),int(y2)], 'center': [int(cx),int(cy)], 'frame': np.array(frame[y1:y2,x1:x2]).tolist() })
+    # object_list.append({'id': int(object_id) , 'object': str(object_name), 'box': [int(x1),int(y1),int(x2),int(y2)], 'center': [int(cx),int(cy)], 'frame': np.array(frame[y1:y2,x1:x2]).tolist() })
     
     if configs['center_to_axis'] == "True":
         cv2.line(frame, (cx, cy),(int(frame.shape[1] / 2), int(frame.shape[0] / 2)),object_color, thickness=1) 
@@ -91,6 +94,8 @@ def multiprocessFrame(frame, classid, confidence, box):
 
 def processFrame(frame,net):
     global fps, frame_id , track_objects, track_objects, configs, trackfile_mod_time, configfile_mod_time, object_list, jsondata
+    np.empty(object_list)
+    
     jsondata = objectjson.json_read()
 
     if trackfile_mod_time == 0 or trackfile_mod_time != os.stat(trackfile).st_mtime:
@@ -102,7 +107,7 @@ def processFrame(frame,net):
 
     class_ids, confidences, boxes = objectdetect.getObjects(frame,net)
 
-    object_list = []
+    
     frame_id+=1     
     object_count = 0
     threads = []
@@ -117,7 +122,7 @@ def processFrame(frame,net):
     for thread in threads: thread.start()
     for thread in threads: thread.join()     
 
-    objectjson.json_update(jsondata,object_list)
+    objectjson.json_update(jsondata,object_list.tolist())
 
     fps = frame_id / (time.time() - starting_time)    
     frame = annotateFrame(frame,fps,len(class_ids),track_objects_total)
