@@ -22,7 +22,6 @@ objectconfig.initConfig()
 trackfile_mod_time = 0
 configfile_mod_time = 0
 center_axis = False
-object_list = np.array([])
 
 class_list = objectdetect.loadClasses()
 
@@ -55,10 +54,9 @@ def dominantColor(frame):
     return dominantColor
 
 
-def multiprocessFrame(frame, classid, confidence, box):    
+def multiprocessFrame(frame, classid, confidence, box):  
     x1, x2, y1, y2 = box[0], (box[0] + box[2]), box[1], (box[1] + box[3])
-    cx, cy = int(x1+x2)//2, int(y1+y2)//2  
-    
+    cx, cy = int(x1+x2)//2, int(y1+y2)//2      
     object_name = class_list[classid]    
     object_id = 0
     for x in range(frames_back):
@@ -77,15 +75,16 @@ def multiprocessFrame(frame, classid, confidence, box):
                 #     if dcy <= thresh:
                 #         diff.append([int(i["id"]),dcx,dcy])
         if object_id != 0:
-            break
-    
+            break   
             
     object_text = str(object_name) +" "+ str(round(confidence,1)) +" : " +str(object_id)
-    np.append(object_list,{'id': int(object_id) , 'object': str(object_name), 'box': [int(x1),int(y1),int(x2),int(y2)], 'center': [int(cx),int(cy)], 'frame': np.array(frame[y1:y2,x1:x2]).tolist() })
-    # object_list.append({'id': int(object_id) , 'object': str(object_name), 'box': [int(x1),int(y1),int(x2),int(y2)], 'center': [int(cx),int(cy)], 'frame': np.array(frame[y1:y2,x1:x2]).tolist() })
+    # np.append(object_list,{'id': int(object_id) , 'object': str(object_name), 'box': [int(x1),int(y1),int(x2),int(y2)], 'center': [int(cx),int(cy)], 'frame': np.array(frame[y1:y2,x1:x2]).tolist() })
+    # cv2.imwrite('output.png', )
+    grayscale = cv2.cvtColor(frame[y1:y2,x1:x2], cv2.COLOR_BGR2GRAY)
+    object_list.append({'id': int(object_id) , 'object': str(object_name), 'box': [int(x1),int(y1),int(x2),int(y2)], 'center': [int(cx),int(cy)], 'frame': np.array(grayscale).tolist() })
     
     if configs['center_to_axis'] == "True":
-        cv2.line(frame, (cx, cy),(int(frame.shape[1] / 2), int(frame.shape[0] / 2)),object_color, thickness=1) 
+        cv2.line(frame, (cx, cy),(int(fwidth/2), int(fheight/2)),object_color, thickness=1) 
     if configs['box_border'] == "True":
         cv2.rectangle(frame, box, (object_color), 2)
         cv2.rectangle(frame, (x1,y1-20),(x1+len(object_text)*6,y1), object_color, -1)
@@ -93,9 +92,10 @@ def multiprocessFrame(frame, classid, confidence, box):
     cv2.circle(frame,center=(cx,cy),radius=2,color=(10,10,255),thickness=-1)   
 
 def processFrame(frame,net):
-    global fps, frame_id , track_objects, track_objects, configs, trackfile_mod_time, configfile_mod_time, object_list, jsondata
-    np.empty(object_list)
-    
+    global fps, frame_id , track_objects, track_objects, configs, trackfile_mod_time, configfile_mod_time, object_list, jsondata, fwidth, fheight
+   
+    object_list = []
+    fheight, fwidth , _ = frame.shape
     jsondata = objectjson.json_read()
 
     if trackfile_mod_time == 0 or trackfile_mod_time != os.stat(trackfile).st_mtime:
@@ -106,7 +106,6 @@ def processFrame(frame,net):
         configs = objectconfig.readConfig()
 
     class_ids, confidences, boxes = objectdetect.getObjects(frame,net)
-
     
     frame_id+=1     
     object_count = 0
@@ -116,13 +115,12 @@ def processFrame(frame,net):
             break
         if class_list[classid] in track_objects:
             threads.append(Thread(target=multiprocessFrame,args=(frame, classid, confidence, box))) 
-            object_count+=1   
-            
+            object_count+=1               
     track_objects_total = len(threads)
     for thread in threads: thread.start()
     for thread in threads: thread.join()     
 
-    objectjson.json_update(jsondata,object_list.tolist())
+    objectjson.json_update(jsondata,object_list)
 
     fps = frame_id / (time.time() - starting_time)    
     frame = annotateFrame(frame,fps,len(class_ids),track_objects_total)

@@ -25,6 +25,11 @@ def json_read():
     json_init()
     with open(jsonfile, 'r') as f:
         jdata = json.load(f)
+    if not jdata:
+        os.remove(jsonfile)
+        json_init()
+    with open(jsonfile, 'r') as f:
+        jdata = json.load(f)
     return jdata
 
 def json_write(dict):
